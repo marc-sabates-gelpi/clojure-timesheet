@@ -6,25 +6,17 @@
 
 (def MESSAGE "A total of %.1f hours")
 
-(defn get-time [s]
-  (r/fold + (r/map #(t/in-minutes
-                     (t/interval
-                      (c/from-date
-                       (:start %))
-                      (c/from-date
-                       (:end %)))) s)))
-
-(defn to-hours [m]
-  (/ m 60))
-
 (defn -main
   [& args]
-  (->> args
+  (-> args
       first
       slurp
       read-string
-      get-time
-      to-hours
+      (as-> session (r/fold + (r/map #(t/in-minutes (t/interval
+                                                     (c/from-date (:start %))
+                                                     (c/from-date (:end %))))
+                                     session)))
+      (as-> minutes (/ minutes 60))
       float
-      (format MESSAGE)
+      (as-> amount (format MESSAGE amount))
       println))
