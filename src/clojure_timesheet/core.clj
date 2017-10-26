@@ -22,7 +22,7 @@
   (let [end (c/to-date (t/now))
         current (peek ss)
         ended (assoc current :end end)]
-    (spit file (conj (pop ss) ended))
+    (spit file (sort-by #(:start %) #(compare %2 %) (conj (pop ss) ended)))
     (println (str "Current ended session: " ended))))
 
 (defn sum-up-sessions [ss]
