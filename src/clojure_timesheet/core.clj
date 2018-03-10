@@ -5,36 +5,55 @@
             [clojure.string :refer [blank?]])
   (:gen-class))
 
-(def MESSAGE "A total of %.1f hours")
+(def SUM-UP-MESSAGE "A total of %.1f hours from %s")
 (def START "start")
 (def END "end")
 (def DEFAULT-DESC "default description")
+(def FINISH-MESSAGE "Session finished: %s")
+(def FINISH-WARNING-MESSAGE "Session was already finished, nothing changed: %s")
+(def START-MESSAGE "New session started: %s")
+(def START-WARNING-MESSAGE "There is already a started session, nothing changed: %s")
 
-(defn start-session [ss file desc]
+(defn get-started [node]
+  (when (and (:start node) (not (:end node))) node))
+(defn start-session
   "Registers a new started session with the current time into the file"
-  (let [start (c/to-date (t/now))
-        new {:start start :desc (if (blank? desc) DEFAULT-DESC desc)}]
-    (spit file (conj ss new))
-    (println (str "Added new session: " new))))
+  [all file desc]
+  (let [all (reverse (sort-by :start all))
+        ongoing (some get-started all)]
+    (if ongoing
+      (println (format START-WARNING-MESSAGE ongoing))
+      (let [new {:start (c/to-date (t/now)) :desc (or desc DEFAULT-DESC)}]
+        (spit file (conj all new))
+        (println (format START-MESSAGE new))))))
 
-(defn end-session [ss file]
+(defn end-session
   "Registers the end of the last started session with the current time into the file"
-  (let [end (c/to-date (t/now))
-        current (peek ss)
-        ended (assoc current :end end)]
-    (spit file (sort-by #(:start %) #(compare %2 %) (conj (pop ss) ended)))
-    (println (str "Current ended session: " ended))))
+  [sessions file]
+  (let [[current & others] (reverse (sort-by :start sessions))]
+    (if (:end current)
+      (println (format FINISH-WARNING-MESSAGE current))
+      (let [end (assoc current :end (c/to-date (t/now)))]
+        (println (format FINISH-MESSAGE end))
+        (spit file (conj others end))))))
 
-(defn sum-up-sessions [ss]
+(defn from-date
+  "Gets the earliest session time"
+  [sessions]
+  (-> (sort-by :start sessions)
+      first
+      :start))
+
+(defn sum-up-sessions
   "Sums up the completed sessions time"
+  [sessions]
   (-> (r/fold + (r/map #(t/in-minutes (t/interval
                                        (c/from-date (:start %))
                                        (c/from-date (:end %))))
-                       (r/filter #(and (:start %) (:end %)) ss)))
-      (as-> minutes
-          (/ minutes 60))
+                       (r/filter #(and (:start %) (:end %)) sessions)))
+      (/ 60)
       float
-      (as-> amount (format MESSAGE amount))
+      (as-> amount (format SUM-UP-MESSAGE amount (from-date sessions)))
       println))
 
 (defn -main
