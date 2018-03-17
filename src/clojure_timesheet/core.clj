@@ -5,14 +5,15 @@
             [clojure.string :refer [blank?]])
   (:gen-class))
 
-(def SUM-UP-MESSAGE "A total of %.1f hours from %s")
-(def START "start")
-(def END "end")
-(def DEFAULT-DESC "default description")
-(def FINISH-MESSAGE "Session finished: %s")
-(def FINISH-WARNING-MESSAGE "Session was already finished, nothing changed: %s")
-(def START-MESSAGE "New session started: %s")
-(def START-WARNING-MESSAGE "There is already a started session, nothing changed: %s")
+(def ^:const SUM-UP-MESSAGE "A total of %.1f hours from %s")
+(def ^:const START "start")
+(def ^:const END "end")
+(def ^:const STOP "stop")
+(def ^:const DEFAULT-DESC "default description")
+(def ^:const FINISH-MESSAGE "Session finished: %s")
+(def ^:const FINISH-WARNING-MESSAGE "Session was already finished, nothing changed: %s")
+(def ^:const START-MESSAGE "New session started: %s")
+(def ^:const START-WARNING-MESSAGE "There is already a started session, nothing changed: %s")
 
 (defn get-started [node]
   (when (and (:start node) (not (:end node))) node))
@@ -63,5 +64,5 @@
       read-string
       (as-> sessions
           (cond (= op START) (start-session sessions file desc) 
-                (= op END) (end-session sessions file)
+                (or (= op END) (= op STOP)) (end-session sessions file)
                 :else (sum-up-sessions sessions)))))
